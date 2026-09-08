@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>入职助手 · 员工端 Demo</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" />
+<script>
+  tailwind.config = {
+    theme: { extend: { colors: { brand: {50:'#eef4ff',100:'#dbe6ff',200:'#bdd0ff',300:'#94b0fb',400:'#6f8cf7',500:'#5b7cf5',600:'#4358e6',700:'#3846c8',800:'#2f37a3',900:'#262b74'} } } }
+  };
+</script>
+<style>
+  html,body{font-family:ui-sans-serif,system-ui,"PingFang SC","Microsoft YaHei","Segoe UI",sans-serif;}
+  ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:8px}::-webkit-scrollbar-track{background:transparent}
+  .msg-in{animation:mi .28s ease both}@keyframes mi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  .dot{width:6px;height:6px;border-radius:9999px;background:#94a3b8;display:inline-block;animation:blink 1.1s infinite both}
+  .dot:nth-child(2){animation-delay:.18s}.dot:nth-child(3){animation-delay:.36s}
+  @keyframes blink{0%,80%,100%{opacity:.25;transform:translateY(0)}40%{opacity:1;transform:translateY(-3px)}}
+  details>summary{list-style:none}details>summary::-webkit-details-marker{display:none}
+  .probox pre{white-space:pre-wrap;word-break:break-all}
+</style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden bg-[#eef1f6] text-slate-800 text-sm">
+
+  <!-- ============ 顶栏 ============ -->
+  <header class="shrink-0 z-30 bg-gradient-to-r from-[#131a30] via-[#1b2546] to-[#101d3f] text-white shadow-md">
+    <div class="max-w-5xl mx-auto px-4 h-14 flex items-center gap-3">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center shadow">
+          <i class="fa fa-paper-plane text-white text-sm"></i>
+        </div>
+        <div class="leading-tight">
+          <div class="font-bold tracking-wide flex items-center gap-2"><span class="text-[15px]">入职助手</span>
+            <span class="text-[10px] px-1.5 py-px rounded-full bg-emerald-400/20 text-emerald-300 border border-emerald-300/30 font-medium">员工端</span>
+          </div>
+          <div class="text-[10px] text-slate-400 leading-none">懂制度 · 懂流程 · 更懂你的入职进度</div>
+        </div>
+      </div>
+      <div class="flex-1"></div>
+      <span id="modeDot" class="hidden sm:inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full border font-medium bg-white/5 border-white/15 text-slate-300" title="引擎实时状态"></span>
+      <a href="/" title="Plan+Skill 配置 / 数据维护 / 知识库等维护功能"
+         class="inline-flex items-center gap-1.5 text-[12px] px-3 py-1.5 rounded-lg border border-white/20 hover:bg-white/10 transition-colors">
+        <i class="fa fa-cogs"></i><span class="hidden sm:inline">维护工作台</span>
+      </a>
+    </div>
+  </header>
+
+  <main class="relative flex-1 min-h-0">
+    <!-- ============ 视图一：选择身份（员工卡） ============ -->
+    <section id="welcome" class="absolute inset-0 overflow-y-auto">
+      <div class="max-w-5xl mx-auto px-5 py-8">
+        <div class="text-center mb-6">
+          <h1 class="text-2xl font-bold text-slate-800">你好，先告诉我你是谁 👋</h1>
+          <p class="text-slate-500 mt-1.5 max-w-xl mx-auto leading-relaxed">
+            选择一张<b class="text-slate-700">模拟员工卡</b>，我会结合<b class="text-slate-700">你的岗位、部门与入职进度</b>来回答。
+            这是一套演示环境，员工与数据均为虚构。
+          </p>
+        </div>
+        <div class="flex justify-center mb-5">
+          <div class="relative w-full max-w-md">
+            <i class="fa fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input id="empSearch" type="text" placeholder="搜索姓名 / 部门 / 岗位…"
+              class="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-300 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-400" />
+          </div>
+        </div>
+        <div id="empGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+        <p id="welcomeLoad" class="text-center text-slate-400 py-10"><i class="fa fa-spinner fa-spin"></i> 正在加载员工…</p>
+        <p id="connWarn" class="hidden text-center text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 max-w-xl mx-auto leading-relaxed"></p>
+        <div class="text-center text-[11px] text-slate-400 mt-8 leading-relaxed">
+          顶层栏可随时前往「维护工作台」查看底层的 Planner / Skill / Tool 配置与执行日志 ·
+          <span class="text-slate-500">本页 = 员工使用端演示</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ 视图二：对话 ============ -->
+    <section id="chat" class="absolute inset-0 flex-col hidden">
+      <!-- 会话顶部：当前身份 -->
+      <div class="shrink-0 bg-white/85 backdrop-blur border-b border-slate-200">
+        <div class="max-w-3xl mx-auto px-4 h-[52px] flex items-center gap-3">
+          <button id="backPick" title="重新选择身份" class="shrink-0 flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-brand-600 transition">
+            <i class="fa fa-angle-left"></i> 切换
+          </button>
+          <span id="chatEmpMini"></span>
+          <div class="flex-1"></div>
+          <span id="convNote" class="hidden sm:inline text-[11px] text-slate-400"></span>
+        </div>
+      </div>
+
+      <!-- 消息区 -->
+      <div id="msgArea" class="flex-1 min-h-0 overflow-y-auto">
+        <div id="msgs" class="max-w-3xl mx-auto px-4 py-5 space-y-4"></div>
+      </div>
+
+      <!-- 示例问题 chips -->
+      <div class="shrink-0 bg-white/70 backdrop-blur border-t border-slate-200">
+        <div class="max-w-3xl mx-auto px-4 pt-2.5">
+          <div id="qChips" class="flex flex-wrap gap-1.5"></div>
+        </div>
+      </div>
+
+      <!-- 输入区 -->
+      <div class="shrink-0 bg-white border-t border-slate-200 shadow-[0_-2px_12px_rgba(15,23,42,.04)]">
+        <div class="max-w-3xl mx-auto px-4 py-3 flex items-end gap-2">
+          <div class="flex-1 border border-slate-300 rounded-2xl bg-slate-50 focus-within:ring-2 focus-within:ring-brand-200 focus-within:border-brand-400 transition overflow-hidden">
+            <textarea id="qInput" rows="1" placeholder="问我任何入职相关的问题，例如：入职第一天需要做什么？"
+              class="w-full resize-none bg-transparent px-3.5 py-2.5 outline-none leading-relaxed placeholder:text-slate-400"></textarea>
+          </div>
+          <button id="sendBtn" title="发送 (Enter)"
+            class="shrink-0 h-[42px] w-[42px] rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 disabled:opacity-40 disabled:cursor-not-allowed text-white shadow flex items-center justify-center transition">
+            <i class="fa fa-send"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="hidden fixed bottom-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-xl bg-slate-900 text-white text-sm shadow-xl"></div>
+
+<script>
+/* =====================================================
+   入职助手 · 员工端 Demo
+   纯前端壳：选员工卡 → 对话问答；真实问答通过同源 /api/run（SSE）交给后端
+   Plan+Skill 引擎，本页只渲染最终话术；执行细节折叠展示（演示用）。
+   ===================================================== */
+const $ = (s) => document.querySelector(s);
+const STAGE_LABEL = { day_1: "入职第1天", week_1: "入职第一周", month_1: "入职首月",
+  probation_mid: "试用期中", onboarded: "已转正" };
+const KIND_META = { skill: ["技能生成", "bg-violet-50 text-violet-700 border-violet-200"],
+  tool: ["确定性查询", "bg-emerald-50 text-emerald-700 border-emerald-200"] };
+const RUN_EXAMPLES = [
+  "入职第一天需要做什么",
+  "我的入职任务进度怎么样",
+  "入职后要参加哪些培训",
+  "请假制度是怎么规定的",
+  "社保公积金什么时候开始缴纳",
+  "怎么办理门禁",
+  "领电脑该找谁办理",
+  "帮我查一下同事周颖的账号状态",
+];
+const AV_COLORS = ["bg-indigo-500", "bg-sky-500", "bg-emerald-500", "bg-rose-400",
+  "bg-violet-500", "bg-amber-500", "bg-teal-500", "bg-blue-500", "bg-fuchsia-500", "bg-cyan-500"];
+
+const state = {
+  employees: [], mode: {}, empId: "", emp: null,
+  running: false, sessionId: "",
+};
+let lastEvents = [];        // 本轮 SSE 事件快照，供“查询过程”折叠渲染
+
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) =>
+  ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+function avatarCls(id) { let h = 0; for (const ch of String(id)) h = (h * 31 + ch.charCodeAt(0)) >>> 0; return AV_COLORS[h % AV_COLORS.length]; }
+function badge(text, cls) { return `<span class="inline-flex items-center gap-1 text-[10px] px-1.5 py-px rounded-full font-medium ${cls}">${esc(text)}</span>`; }
+function toast(msg) { const t = $("#toast"); t.textContent = msg; t.classList.remove("hidden");
+  clearTimeout(t._t); t._t = setTimeout(() => t.classList.add("hidden"), 2400); }
+
+function convKey() { return `oa.emp.conv.${state.empId}`; }
+function sessionKey() { return `oa.emp.sid.${state.empId}`; }
+function loadConv() { try { return JSON.parse(localStorage.getItem(convKey()) || "[]"); } catch (e) { return []; } }
+function saveConv(list) { try { localStorage.setItem(convKey(), JSON.stringify(list.slice(-12))); } catch (e) { /* ignore */ } }
+function pickAvatar(e) { return `${avatarCls(e.id)} text-white flex items-center justify-center font-bold`; }
+
+const MM = { account_status: ["账号", { pending: "待激活", activated: "已激活" }],
+  device_status: ["设备", { pending: "未签收", signed: "已签收" }],
+  badge_status: ["门禁", { pending: "待办理", done: "已办理" }] };
+function empStatusBadges(e) {
+  return Object.entries(MM).map(([k, [label, mm]]) => {
+    const v = e[k]; const on = v !== "pending";
+    return `<span class="inline-flex items-center gap-1 text-[11px] text-slate-500"><span class="w-1.5 h-1.5 rounded-full ${on ? "bg-emerald-500" : "bg-amber-400"}"></span>${label} ${mm[v] || v || "-"}</span>`;
+  }).join("");
+}
+
+/* ---------------- 初始化 ---------------- */
+async function init() {
+  $("#backPick").addEventListener("click", () => {
+    if (state.running) { toast("正在查询中，请稍候…"); return; }
+    showWelcome();
+  });
+  $("#sendBtn").addEventListener("click", () => ask($("#qInput").value.trim()));
+  $("#qInput").addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); ask($("#qInput").value.trim()); }
+  });
+  $("#qInput").addEventListener("input", autoGrow);
+  $("#empSearch").addEventListener("input", () => renderEmpGrid($("#empSearch").value.trim().toLowerCase()));
+  if (location.protocol === "file:") {
+    const w = $("#connWarn"); w.classList.remove("hidden");
+    w.innerHTML = '<i class="fa fa-exclamation-triangle"></i> 当前为 file:// 方式打开，无法连接后端。请先启动后端并用 <b>http://127.0.0.1:8010/emp</b> 访问，问答需要真实引擎响应。';
+  }
+  await loadMeta();
+  showWelcome();
+}
+async function loadMeta() {
+  try {
+    const [emps, st] = await Promise.all([
+      fetch("/api/employees").then((r) => { if (!r.ok) throw new Error("后端未就绪"); return r.json(); }),
+      fetch("/api/status").then((r) => r.json()).catch(() => ({})),
+    ]);
+    state.employees = emps; state.mode = st || {};
+    const dot = $("#modeDot");
+    const live = st.llm_configured;
+    dot.innerHTML = `<span class="w-1.5 h-1.5 rounded-full ${live ? "bg-emerald-400" : "bg-amber-400"}"></span>` +
+      (live ? `引擎 Live · ${esc(st.llm_model || "")}` : "引擎 Mock 自动");
+    renderEmpGrid("");
+  } catch (err) {
+    const w = $("#connWarn"); w.classList.remove("hidden");
+    w.innerHTML = '<i class="fa fa-plug"></i> 连接后端失败：' + esc(err.message) +
+      '。<br>请先启动后端：<b>D:\\projects\\onboarding-assistant</b> 下运行 <span class="font-mono">.venv\\Scripts\\python app.py</span>，再刷新本页。';
+    $("#welcomeLoad").classList.add("hidden");
+  }
+}
+function renderEmpGrid(kw) {
+  const grid = $("#empGrid"); $("#welcomeLoad").classList.add("hidden");
+  const list = state.employees.filter((e) => !kw ||
+    (e.name || "").toLowerCase().includes(kw) || (e.department || "").toLowerCase().includes(kw) ||
+    (e.position || "").toLowerCase().includes(kw));
+  grid.innerHTML = list.map((e, i) => `
+    <button type="button" onclick="pick('${esc(e.id)}')" data-emp="${esc(e.id)}"
+      class="group text-left bg-white rounded-2xl border border-slate-200 shadow-sm hover:shadow-md hover:border-brand-300 hover:-translate-y-0.5 transition-all p-4 flex flex-col gap-3 ${state.empId === e.id ? "ring-2 ring-brand-400 border-brand-300" : ""}">
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-xl ${avatarCls(e.id)} text-white flex items-center justify-center text-lg font-bold shrink-0">${esc((e.name || "?").slice(0, 1))}</div>
+        <div class="min-w-0 flex-1">
+          <div class="font-semibold text-slate-800 truncate">${esc(e.name)}
+            <span class="text-[10px] font-mono text-slate-400">#${esc(e.id)}</span></div>
+          <div class="text-[11px] text-slate-500 truncate">${esc(e.department)} · ${esc(e.position || "-")}</div>
+        </div>
+        <i class="fa fa-chevron-right text-slate-300 group-hover:text-brand-400 transition"></i>
+      </div>
+      <div class="flex flex-wrap items-center gap-1.5">
+        ${badge((e.hire_date || "") + " 入职 · " + (STAGE_LABEL[e.stage] || e.stage || ""),
+          e.stage === "day_1" ? "bg-brand-50 text-brand-600 border border-brand-200" : "bg-slate-100 text-slate-600")}
+      </div>
+      <div class="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 border-t border-dashed border-slate-100 text-[10px]">
+        ${empStatusBadges(e)}
+      </div>
+    </button>`).join("") ||
+    `<div class="col-span-full text-center text-slate-400 py-8"><i class="fa fa-user-o"></i> 没有匹配的员工</div>`;
+}
+
+/* ---------------- 视图切换 ---------------- */
+function showWelcome() {
+  $("#chat").classList.add("hidden"); $("#welcome").classList.remove("hidden");
+  $("#empSearch").value = ""; renderEmpGrid("");
+}
+function pick(id) {
+  state.emp = state.employees.find((e) => e.id === id) || null;
+  if (!state.emp) return;
+  state.empId = id;
+  state.sessionId = localStorage.getItem(sessionKey()) || ""; // 恢复该员工的多轮会话
+  enterChat();
+}
+function enterChat() {
+  $("#welcome").classList.add("hidden"); $("#chat").classList.remove("hidden");
+  $("#chat").classList.add("flex");
+  const e = state.emp;
+  $("#chatEmpMini").innerHTML = `
+    <div class="flex items-center gap-2">
+      <div class="w-7 h-7 rounded-lg ${avatarCls(e.id)} text-white flex items-center justify-center font-bold text-sm">${esc((e.name || "?").slice(0, 1))}</div>
+      <div class="leading-tight">
+        <div class="text-[13px] font-semibold text-slate-700">${esc(e.name)}</div>
+        <div class="text-[10px] text-slate-400">${esc(e.department)} · ${STAGE_LABEL[e.stage] || e.stage || ""}</div>
+      </div>
+    </div>`;
+  $("#convNote").textContent = state.sessionId ? "会话延续中 · 可直接追问" : "";
+  // 示例问题
+  const chips = $("#qChips");
+  chips.innerHTML = RUN_EXAMPLES.map((q) =>
+    `<button type="button" data-q="${esc(q)}" class="px-2.5 py-1 rounded-full border border-slate-200 bg-white text-[11px] text-slate-500 hover:border-brand-400 hover:text-brand-600 hover:bg-brand-50 transition">${esc(q)}</button>`).join("");
+  chips.querySelectorAll("button").forEach((b) => { b.onclick = () => ask(b.dataset.q); });
+  // 渲染历史（该员工此前已完成的问答）
+  const msgs = $("#msgs"); msgs.innerHTML = "";
+  loadConv().forEach((m) => appendHistory(m));
+  autoScroll();
+  $("#qInput").focus();
+}
+function appendHistory(m) {
+  appendUserMsg(m.q, m.ts);
+  appendAnswerMsg(m);
+}
+
+/* ---------------- 消息渲染 ---------------- */
+function userHtml(q) {
+  return `<div class="flex justify-end msg-in"><div class="max-w-[82%] bg-gradient-to-br from-brand-500 to-brand-600 text-white rounded-2xl rounded-br-md px-3.5 py-2.5 shadow-sm text-[13px] leading-relaxed">${esc(q)}</div></div>`;
+}
+function appendUserMsg(q, ts) {
+  const box = document.createElement("div"); box.innerHTML = userHtml(q);
+  $("#msgs").appendChild(box.firstElementChild); autoScroll();
+}
+function autoGrow() {
+  const t = $("#qInput"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 120) + "px";
+}
+
+// 回复中的 [n] → 可点（仅当引用数足够），点击在同消息展开引用区
+function linkify(text, refs) {
+  const n = (refs || []).length;
+  return esc(text).replace(/\[(\d+)\]/g, (m, k) => {
+    const i = parseInt(k, 10);
+    return (n && i >= 1 && i <= n) ? `<a href="javascript:;" data-jump="${i}" class="ref-chip font-bold text-brand-600 hover:underline">[${i}]</a>` : m;
+  });
+}
+function answerHtml(m) {
+  const refs = m.refs || [];
+  const mockTag = m.used_mock
+    ? badge("Mock 降级输出", "bg-amber-50 text-amber-600 border border-amber-200") : "";
+  const proc = m.events && m.events.length ? `<details class="proc-box mt-2.5 text-[11px]">
+      <summary class="cursor-pointer select-none text-slate-400 hover:text-brand-600 transition inline-flex items-center gap-1">
+        <i class="fa fa-terminal"></i> 查看本次查询过程（Planner · Skill/Tool 逐步执行）
+      </summary>
+      <div class="mt-2">${procHtml(m.events)}</div></details>` : "";
+  const refsBox = refs.length ? `
+    <div class="refs-box hidden mt-2.5 border border-slate-200 rounded-xl bg-slate-50/80 p-2.5 space-y-1.5 text-[11px]">
+      ${refs.map((r) => `
+        <div class="ref-row flex gap-2 items-start" data-n="${r.n}">
+          <span class="font-mono text-brand-600 shrink-0">[${r.n}]</span>
+          ${r.kind === "doc" ? badge("原文摘录", "bg-teal-50 text-teal-600 border border-teal-200") : badge("制度条款", "bg-indigo-50 text-indigo-600 border border-indigo-200")}
+          <span class="text-slate-700"><b>${esc(r.title || "")}</b>
+            <span class="text-slate-400"> · ${esc(r.meta || "")}</span>
+            ${r.quote ? `<details class="mt-1"><summary class="cursor-pointer text-slate-400 select-none">查看原文</summary>
+                <div class="mt-1 bg-white border border-slate-200 rounded-lg px-2.5 py-2 leading-relaxed text-slate-600">${esc(r.quote)}</div></details>` : ""}
+          </span>
+        </div>`).join("")}
+    </div>` : "";
+  const refsToggle = refs.length ? `
+    <button type="button" data-toggle-refs class="mt-2 text-[11px] text-slate-400 hover:text-brand-600 transition">
+      <i class="fa fa-bookmark-o"></i> 查看引用出处（${refs.length}）</button>` : "";
+  const downgrade = m.downgraded
+    ? `<div class="mt-2.5 flex items-start gap-2 text-[12px] text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
+        <i class="fa fa-life-buoy mt-0.5"></i><span>本条已为你<b>转人工跟进</b>，请以 HR 对接人或直属领导的答复为准。</span></div>` : "";
+  return `<div class="flex items-start gap-2.5 msg-in">
+      <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white flex items-center justify-center shrink-0 shadow-sm"><i class="fa fa-paper-plane text-[12px]"></i></div>
+      <div class="min-w-0 max-w-[86%] bg-white border border-slate-200 rounded-2xl rounded-tl-md px-4 py-3 shadow-sm">
+        <div class="flex items-center gap-2 mb-1.5 flex-wrap">
+          <b class="text-[12px] text-slate-700">入职助手</b>
+          ${mockTag}
+          <span class="text-[10px] text-slate-300 ml-auto">${m.ts || ""}</span>
+        </div>
+        <div class="text-[13px] text-slate-700 leading-relaxed whitespace-pre-wrap a-body">${linkify(m.reply || "", refs)}</div>
+        ${downgrade}${refsBox}
+        <div class="flex items-center gap-3 mt-1">${refsToggle}${proc}</div>
+      </div>
+    </div>`;
+}
+function appendAnswerMsg(m) {
+  const box = document.createElement("div"); box.innerHTML = answerHtml(m);
+  $("#msgs").appendChild(box.firstElementChild); autoScroll();
+}
+
+/* ---------------- 提问（SSE） ---------------- */
+function ask(q) {
+  q = (q || "").trim();
+  if (!q) return;
+  if (state.running) { toast("上一条正在查询中…"); return; }
+  if (!state.emp) return;
+  state.running = true; lastEvents = []; _curQ = q;
+  $("#sendBtn").disabled = true;
+  $("#qInput").value = ""; autoGrow();
+  appendUserMsg(q, nowTime());
+  // 正在回答气泡
+  const box = document.createElement("div");
+  box.innerHTML = `<div class="flex items-start gap-2.5 msg-in"><div class="w-8 h-8 rounded-xl bg-gradient-to-br from-brand-400 to-brand-600 text-white flex items-center justify-center shrink-0"><i class="fa fa-paper-plane text-[12px]"></i></div>
+    <div class="min-w-0 max-w-[86%] bg-white border border-slate-200 rounded-2xl rounded-tl-md px-4 py-3 shadow-sm">
+      <div class="flex items-center gap-2 mb-1"><b class="text-[12px] text-slate-700">入职助手</b></div>
+      <div class="flex items-center gap-1.5"><span class="dot"></span><span class="dot"></span><span class="dot"></span>
+        <span class="text-slate-400 text-xs ml-1">正在查询你的入职信息…</span></div>
+      <div class="mt-2.5 step-strip"></div>
+      <div class="mt-2 note-strip text-[11px] text-slate-400"></div>
+    </div></div>`;
+  $("#msgs").appendChild(box.firstElementChild);
+  const runBubble = $("#msgs").lastElementChild;
+  autoScroll();
+  runSSE(q, runBubble);
+}
+async function runSSE(question, bubble) {
+  try {
+    const res = await fetch("/api/run", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ question, employee_id: state.empId, session_id: state.sessionId || null }),
+    });
+    if (!res.ok) throw new Error("后端返回 " + res.status + "：" + (await res.text()).slice(0, 200));
+    const reader = res.body.getReader(); const dec = new TextDecoder("utf-8");
+    let buf = "";
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let idx;
+      while ((idx = buf.indexOf("\n\n")) >= 0) { const raw = buf.slice(0, idx); buf = buf.slice(idx + 2); handleSSE(raw, bubble); }
+    }
+  } catch (err) {
+    lastEvents = [];
+    bubble.remove();
+    const box = document.createElement("div");
+    box.innerHTML = `<div class="flex justify-end msg-in"><div class="max-w-[86%] rounded-2xl rounded-br-md px-3.5 py-2.5 text-[12px] leading-relaxed border border-red-200 bg-red-50 text-red-600"><i class="fa fa-exclamation-circle"></i> 查询失败：${esc(err.message)}</div></div>`;
+    $("#msgs").appendChild(box.firstElementChild);
+  } finally {
+    state.running = false; $("#sendBtn").disabled = false;
+  }
+}
+let _curQ = "", _plan = null, _risk = null, _doneIdx = 0;
+function handleSSE(raw, bubble) {
+  let type = "", data = null;
+  raw.split("\n").forEach((line) => {
+    if (line.startsWith("event: ")) type = line.slice(7).trim();
+    else if (line.startsWith("data: ")) { try { data = JSON.parse(line.slice(6)); } catch (e) { data = null; } }
+  });
+  if (!data) return;
+  lastEvents.push({ type, data });
+  if (type === "plan") {
+    _plan = data;
+    if (data.session_id) { state.sessionId = data.session_id; try { localStorage.setItem(sessionKey(), state.sessionId); } catch (e) {} }
+    _doneIdx = 0; renderStepStrip(bubble, data);
+    const note = $("#convNote");
+    if (note && (data.session_turns || 0) > 0) note.textContent = `会话第 ${data.session_turns + 1} 轮 · 可直接追问`;
+    // 追问补全提示（演示：真实引擎如何理解省略主语的追问）
+    if (data.expanded) {
+      const ns = bubble.querySelector(".note-strip"); if (ns) ns.innerHTML = '已将你的追问理解为主题承接：<b class="text-slate-600">「' + esc(data.expanded) + '」</b>';
+    }
+  } else if (type === "step") {
+    _doneIdx = Math.max(_doneIdx, data.order || 0);
+    if (_plan) renderStepStrip(bubble, _plan);
+  } else if (type === "risk") {
+    _risk = data;
+  } else if (type === "done") {
+    _plan = null; _risk = null;
+    // 完成：把“正在查询”气泡替换为最终回答
+    const m = { q: _curQ || "", reply: data.final_reply || "", refs: data.references || [],
+      used_mock: !!data.used_mock, downgraded: !!data.downgraded,
+      events: lastEvents, ts: nowTime() };
+    const conv = loadConv(); conv.push(m); saveConv(conv);
+    bubble.remove();
+    appendAnswerMsg(m);
+    autoScroll();
+  } else if (type === "error") {
+    lastEvents = [];
+    bubble.remove();
+    const box = document.createElement("div");
+    box.innerHTML = `<div class="flex justify-start msg-in"><div class="max-w-[86%] rounded-2xl rounded-tl-md px-3.5 py-2.5 text-[12px] border border-red-200 bg-red-50 text-red-600">引擎执行出错：${esc(data.message || "")}</div></div>`;
+    $("#msgs").appendChild(box.firstElementChild); autoScroll();
+  }
+}
+function renderStepStrip(bubble, plan) {
+  const strip = bubble.querySelector(".step-strip");
+  const steps = plan.steps || []; const total = steps.length;
+  const chips = steps.map((s) => {
+    const isDone = s.order <= _doneIdx; const isNow = s.order === _doneIdx + 1;
+    const meta = KIND_META[s.kind] || ["步骤", "bg-slate-100 text-slate-600 border-slate-200"];
+    return `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] ${isDone ? meta[1] : "border-slate-200 bg-white text-slate-400"}">
+      ${isDone ? '<i class="fa fa-check"></i>' : (isNow ? '<i class="fa fa-circle-o-notch fa-spin text-brand-500"></i>' : `<span class="font-mono">${s.order}</span>`)}
+      <b>${esc(s.name)}</b></span>`;
+  }).join("");
+  strip.innerHTML = total ? '<div class="flex flex-wrap gap-1 items-center">' + chips +
+    `<span class="text-[10px] text-slate-300 ml-0.5">实时查询链路 · 共 ${total} 步</span></div>` : "";
+}
+
+/* ---------------- 查询过程折叠（演示/讲解用） ---------------- */
+function procHtml(events) {
+  const plan = events.find((e) => e.type === "plan");
+  const steps = events.filter((e) => e.type === "step");
+  const risk = events.find((e) => e.type === "risk");
+  const done = events.find((e) => e.type === "done");
+  const route = (plan && plan.data.route) || {};
+  const p = plan && plan.data;
+  const h = [];
+  if (p) h.push(`<div class="flex flex-wrap items-center gap-1.5 mb-2">
+      ${badge("意图 " + (route.intent || "-"), "bg-sky-50 text-sky-700 border border-sky-200")}
+      ${badge("主题 " + (route.topic || "-"), "bg-slate-100 text-slate-600 border border-slate-200")}
+      ${p.kb_first ? badge("知识库优先", "bg-teal-50 text-teal-700 border-teal-200 border") : ""}
+      ${badge("会话 #" + (p.session_turns || 0) + " 轮", "bg-slate-100 text-slate-500 border border-slate-200")}
+    </div>`);
+  if (p && (p.notes || []).length) h.push(`<div class="text-amber-600 mb-1.5">${p.notes.map((n) => "⚠ " + esc(n)).join("<br/>")}</div>`);
+  if (steps.length) {
+    h.push('<div class="space-y-1.5">');
+    steps.forEach((s) => {
+      const d = s.data; const run = d.run || {};
+      const meta = KIND_META[d.kind] || ["步骤", "bg-slate-100 text-slate-600 border-slate-200"];
+      const mBadge = run.used_mock ? badge("Mock 降级", "bg-amber-50 text-amber-600 border border-amber-200")
+        : badge((run.status || "ok"), "bg-emerald-50 text-emerald-600 border border-emerald-200");
+      h.push(`<details class="border border-slate-200 rounded-lg bg-white overflow-hidden">
+        <summary class="cursor-pointer px-2.5 py-1.5 flex items-center gap-2 select-none hover:bg-slate-50">
+          <span class="font-mono text-[10px] text-slate-400 w-4">${d.order}</span>
+          ${badge(d.kind, meta[1] + " border")}
+          <b class="text-[11px] text-slate-700 flex-1">${esc(d.name)}</b>
+          <span class="font-mono text-[10px] text-slate-400">${esc(d.id)}</span>
+          ${mBadge}${run.ms ? `<span class="text-[10px] text-slate-400">${run.ms}ms</span>` : ""}
+        </summary>
+        <div class="px-2.5 pb-2.5 text-[11px] space-y-1.5">
+          ${run.process ? `<div class="text-slate-500 whitespace-pre-wrap border border-slate-100 rounded-lg bg-slate-50 p-2">${esc(run.process)}</div>` : ""}
+          <div class="probox text-slate-600"><b class="text-slate-400">输入</b><pre class="bg-slate-900 text-emerald-300 rounded-lg p-2 mt-0.5 max-h-40 overflow-auto">${esc(jsonBrief(run.input_show))}</pre></div>
+          <div class="probox text-slate-600"><b class="text-slate-400">输出</b><pre class="bg-slate-900 text-sky-200 rounded-lg p-2 mt-0.5 max-h-40 overflow-auto">${esc(jsonBrief(run.output))}</pre></div>
+        </div></details>`);
+    });
+    h.push("</div>");
+  }
+  if (risk) {
+    const r = risk.data;
+    h.push(`<div class="flex items-center gap-1.5 flex-wrap mt-1.5">
+        ${badge(r.downgraded ? "已转人工" : (r.passed ? "合规通过" : "需人工复核"), r.downgraded ? "bg-red-50 text-red-600 border-red-200 border" : (r.passed ? "bg-emerald-50 text-emerald-600 border-emerald-200 border" : "bg-amber-50 text-amber-600 border-amber-200 border"))}
+        ${badge("风险 " + (r.risk_level || "-"), "bg-slate-100 text-slate-500 border border-slate-200")}
+        ${r.regenerated ? badge("自动重生成 1 次", "bg-violet-50 text-violet-600 border-violet-200 border") : ""}
+      </div>
+      ${(r.issues || []).map((i) => `<div class="text-[11px] text-red-500 mt-1">· [${esc(i.type || "")}] ${esc(i.detail || "")}</div>`).join("")}
+      ${(r.escalation && r.escalation.id) ? `<div class="mt-1.5 flex items-center gap-1.5 text-[11px] text-red-500"><i class="fa fa-headphones"></i> 已生成人工工单 <span class="font-mono">${esc(r.escalation.id)}</span></div>` : ""}`);
+  }
+  if (done && done.data && done.data.log_id) h.push(`<div class="text-[10px] text-slate-300 mt-2">log：${esc(done.data.log_id)}${done.data.escalation_id ? " · esc：" + esc(done.data.escalation_id) : ""}</div>`);
+  return h.join("");
+}
+function jsonBrief(o) {
+  if (o === undefined || o === null || o === "") return "（无）";
+  if (typeof o === "string") return o;
+  try { return JSON.stringify(o, null, 1); } catch (e) { return String(o); }
+}
+function nowTime() { const d = new Date(); return [d.getHours(), d.getMinutes()].map((n) => String(n).padStart(2, "0")).join(":"); }
+function autoScroll() { const a = $("#msgArea"); a.scrollTop = a.scrollHeight; }
+
+/* ---------------- 引用 chip / 引用区切换（事件委托） ---------------- */
+document.addEventListener("click", (e) => {
+  const jump = e.target.closest(".ref-chip");
+  if (jump) {
+    e.preventDefault();
+    const msg = jump.closest(".max-w-[86%]"); if (!msg) return;
+    const box = msg.querySelector(".refs-box");
+    if (box) {
+      box.classList.remove("hidden");
+      const row = box.querySelector(`.ref-row[data-n="${jump.dataset.jump}"]`);
+      if (row) { row.scrollIntoView({ behavior: "smooth", block: "center" }); }
+    }
+    return;
+  }
+  const tg = e.target.closest("[data-toggle-refs]");
+  if (tg) {
+    const box = tg.closest(".max-w-[86%]").querySelector(".refs-box");
+    if (box) box.classList.toggle("hidden");
+  }
+});
+
+init();
+</script>
+</body>
+</html>
