@@ -206,7 +206,7 @@ async function loadMeta() {
   } catch (err) {
     const w = $("#connWarn"); w.classList.remove("hidden");
     w.innerHTML = '<i class="fa fa-plug"></i> 连接后端失败：' + esc(err.message) +
-      '。<br>请先启动后端：<b>D:\\projects\\onboarding-assistant</b> 下运行 <span class="font-mono">.venv\\Scripts\\python app.py</span>，再刷新本页。';
+      '。<br>请先启动入职助手后端（<span class="font-mono">python app.py</span>，默认 http://127.0.0.1:8010），再刷新本页。';
     $("#welcomeLoad").classList.add("hidden");
   }
 }
